@@ -206,6 +206,16 @@ async function main() {
   fs.writeFileSync(outPath, finalPdf);
   console.log("\n  Proof packet embedded! " + finalPdf.length + " bytes");
   console.log("  Saved: " + outPath);
+  
+  // Push to Queen Desktop
+  console.log("  Pushing to Queen Desktop...");
+  var { execSync } = require("child_process");
+  try {
+    execSync("scp -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no /tmp/legal-doc-notarized.pdf queen@100.120.56.104:/Users/queen/Desktop/legal-doc-notarized.pdf", { stdio: "pipe", timeout: 10000 });
+    console.log("  Pushed: /Users/queen/Desktop/legal-doc-notarized.pdf");
+  } catch(e) {
+    console.log("  (Queen push skipped — SSH not available)");
+  }
   console.log("  Human-readable seal: visible on last page");
   console.log("  Machine-readable proof: embedded after %%EOF");
 
@@ -213,7 +223,7 @@ async function main() {
   banner("STEP 9: INDEPENDENT VERIFICATION");
   console.log("  Running zero-dependency verification...");
   await sleep(SHORT_PAUSE);
-  var valid = verifyProofPacket(packet, result.data);
+  var valid = verifyProofPacket(packet, sealedPdf);
   console.log("\n  Document integrity: " + (valid ? "PASS" : "FAIL"));
   console.log("  HCS provenance: PASS");
   console.log("\n  Verify independently: node verify.js " + outPath);
@@ -238,6 +248,8 @@ async function main() {
   console.log("  https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + anchor.topic_id + "/messages/" + anchor.sequence_number);
   console.log("");
   console.log("  github.com/Ai-Rook/rook-legal-notary");
+  
+  process.exit(0);
 }
 
 main().catch(function(err) {
