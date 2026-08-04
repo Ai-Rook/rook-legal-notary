@@ -54,7 +54,6 @@ async function main() {
   console.log("  Onchain Provenance for Legal Research");
   console.log("  x402 payment + HCS notarization + PDF proof embedding");
   console.log("  Real case law. Real onchain anchoring. Real chain of custody.");
-  await sleep(PAUSE);
 
   // ─── STEP 1: DISCOVER ───
   banner("STEP 1: DISCOVER x402 LEGAL ENDPOINTS");
@@ -72,7 +71,6 @@ async function main() {
   console.log("\n  Found " + endpoints.length + " paid endpoints:");
   endpoints.forEach(function(ep, i) { console.log("    " + (i+1) + ". " + ep.replace(/^- /, "")); });
   console.log("\n  -> Selected: /api/legal-research (case law retrieval)");
-  await sleep(PAUSE);
 
   // ─── STEP 2: PAY ───
   banner("STEP 2: PAY FOR LEGAL DOCUMENT");
@@ -123,13 +121,11 @@ async function main() {
     }
   }
   console.log("\n  Document retrieved: " + result.data.length + " bytes (PDF)");
-  await sleep(PAUSE);
 
   // ─── STEP 4: HASH ───
   banner("STEP 4: HASH DOCUMENT");
   var hash = crypto.createHash("sha256").update(result.data).digest("hex");
   console.log("  SHA-256: " + hash);
-  await sleep(PAUSE);
 
   // ─── STEP 5: ANCHOR ON HCS ───
   banner("STEP 5: ANCHOR ON HEDERA CONSENSUS SERVICE");
@@ -150,7 +146,6 @@ async function main() {
   console.log("  Sequence: " + anchor.sequence_number);
   console.log("  Consensus: " + anchor.consensus_timestamp);
   console.log("  Tx: " + anchor.tx_id);
-  await sleep(PAUSE);
 
   // ─── STEP 6: BUILD PROOF PACKET ───
   banner("STEP 6: BUILD PROOF PACKET");
@@ -163,7 +158,6 @@ async function main() {
   console.log("  Proof packet assembled:");
   console.log("  Document hash: " + packet.document_hash);
   console.log("  HCS anchor: " + packet.hcs_anchor.tx_id);
-  await sleep(PAUSE);
 
   // ─── STEP 7: ADD VISIBLE PROVENANCE SEAL ───
   banner("STEP 7: ADD VISIBLE PROVENANCE SEAL TO PDF");
@@ -190,7 +184,6 @@ async function main() {
   console.log("  - Full running hash");
   console.log("  - x402 payment reference");
   console.log("  - Verification URL");
-  await sleep(PAUSE);
 
   // ─── STEP 8: EMBED MACHINE-READABLE PROOF ───
   banner("STEP 8: EMBED MACHINE-READABLE PROOF PACKET");
@@ -204,7 +197,6 @@ async function main() {
   console.log("  Saved: " + outPath);
   console.log("  Human-readable seal: visible on last page");
   console.log("  Machine-readable proof: embedded after %%EOF");
-  await sleep(PAUSE);
 
   // ─── STEP 9: VERIFY ───
   banner("STEP 9: INDEPENDENT VERIFICATION");
@@ -214,7 +206,6 @@ async function main() {
   console.log("\n  Document integrity: " + (valid ? "PASS" : "FAIL"));
   console.log("  HCS provenance: PASS");
   console.log("\n  Verify independently: node verify.js " + outPath);
-  await sleep(PAUSE);
 
   // ─── AUDIT TRAIL ───
   banner("FULL AUDIT TRAIL");
@@ -236,7 +227,6 @@ async function main() {
   console.log("  https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + anchor.topic_id + "/messages/" + anchor.sequence_number);
   console.log("");
   console.log("  github.com/Ai-Rook/rook-legal-notary");
-  await sleep(PAUSE);
 }
 
 main().catch(function(err) {
