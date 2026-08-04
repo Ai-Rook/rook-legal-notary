@@ -1,0 +1,18 @@
+{
+  "name": "rook-legal-notary-agent",
+  "version": "1.0.0",
+  "description": "Onchain Provenance for Legal Research — x402 payment + HCS notarization",
+  "main": "agent.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node agent.js",
+    "demo": "node agent.js --video"
+  },
+  "dependencies": {
+    "@coinbase/cdp-sdk": "latest",
+    "@x402/fetch": "latest",
+    "@hashgraph/sdk": "latest",
+    "pdf-lib": "latest",
+    "dotenv": "latest"
+  }
+}
