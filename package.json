@@ -9,10 +9,11 @@
     "demo": "node agent.js --video"
   },
   "dependencies": {
+    "@chainlink/cre-sdk": "^1.17.0",
     "@coinbase/cdp-sdk": "latest",
-    "@x402/fetch": "latest",
     "@hashgraph/sdk": "latest",
-    "pdf-lib": "latest",
-    "dotenv": "latest"
+    "@x402/fetch": "latest",
+    "dotenv": "latest",
+    "pdf-lib": "latest"
   }
 }
