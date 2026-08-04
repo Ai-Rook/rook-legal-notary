@@ -79,16 +79,18 @@ async function addProvenanceSeal(pdfBuffer, sealData) {
     drawText("  " + sealData.hcsTopic, 10, monoFont); y -= 20;
   }
 
-  // Verification instructions
-  drawText("  Verification:", 11, boldFont); y -= 16;
-  drawText("  This document contains an embedded machine-readable proof", 10); y -= 14;
-  drawText("  packet with full HCS anchor data (sequence, consensus", 10); y -= 14;
-  drawText("  timestamp, transaction ID, running hash).", 10); y -= 14;
-  drawText("  ", 10); y -= 10;
-  drawText("  Run: node verify.js this-file.pdf", 10, monoFont); y -= 14;
-  drawText("  ", 10); y -= 10;
-  var verifyUrl = "https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + sealData.hcsTopic;
-  drawText("  Or query: " + verifyUrl, 10, monoFont); y -= 25;
+  // Verification instructions — no CLI, no GitHub, just URLs
+  drawText("  Verify This Document:", 11, boldFont); y -= 16;
+  drawText("  Upload this PDF at:", 10); y -= 14;
+  drawText("  https://ai-rook.com/verify", 10, monoFont); y -= 20;
+  drawText("  Or check directly on Hedera:", 10); y -= 14;
+  var mirrorUrl = "https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + sealData.hcsTopic;
+  var urlLines = wrapText(mirrorUrl, 70);
+  for (var u = 0; u < urlLines.length; u++) {
+    drawText("  " + urlLines[u], 10, monoFont); y -= 14;
+  }
+  y -= 10;
+  drawText("  Match the hash above against the onchain record.", 9); y -= 25;
 
   // Bottom border
   drawText("==========================================================", 9, monoFont); y -= 16;
