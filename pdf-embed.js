@@ -1,32 +1,45 @@
-const { PDFDocument } = require("pdf-lib");
+// PDF embed using trailing append after %%EOF — byte-safe, no string conversion
+const PROOF_MARKER = Buffer.from("ROOK_PROOF_PACKET:", "utf-8");
+const PROOF_END_MARKER = Buffer.from(":END_PROOF_PACKET", "utf-8");
 
-async function embedProofPacket(pdfBuffer, proofPacket) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  const jsonBytes = Buffer.from(JSON.stringify(proofPacket, null, 2));
-  pdfDoc.attach(jsonBytes, "proof-packet.json", {
-    mimeType: "application/json",
-    description: "Onchain provenance proof packet - x402 settlement + HCS anchor",
-    creationDate: new Date(),
-    modificationDate: new Date(),
-  });
-  pdfDoc.setSubject("Anchored: " + proofPacket.document_hash);
-  pdfDoc.setKeywords(["x402", "HCS", "provenance", "notarized", proofPacket.hcs_anchor ? proofPacket.hcs_anchor.topic_id : ""]);
-  pdfDoc.setProducer("Rook Legal Notary Agent v1.0");
-  const modifiedPdf = await pdfDoc.save();
-  return Buffer.from(modifiedPdf);
-}
-
-async function extractProofPacket(pdfBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  const attachments = pdfDoc.listAttachments();
-  for (const name of attachments) {
-    if (name === "proof-packet.json") {
-      const embedded = pdfDoc.getAttachment(name);
-      const json = Buffer.from(embedded).toString("utf-8");
-      return JSON.parse(json);
+function findMarkerInBuffer(haystack, needle, fromPos) {
+  for (var i = fromPos || 0; i <= haystack.length - needle.length; i++) {
+    var match = true;
+    for (var j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) { match = false; break; }
     }
+    if (match) return i;
   }
-  return null;
+  return -1;
 }
 
-module.exports = { embedProofPacket, extractProofPacket };
+function embedProofPacket(pdfBuffer, proofPacket) {
+  var json = Buffer.from(JSON.stringify(proofPacket), "utf-8");
+  var newline = Buffer.from("\n", "utf-8");
+  return Buffer.concat([pdfBuffer, newline, PROOF_MARKER, json, PROOF_END_MARKER, newline]);
+}
+
+function extractProofPacket(pdfBuffer) {
+  var startIdx = findMarkerInBuffer(pdfBuffer, PROOF_MARKER);
+  if (startIdx === -1) return null;
+  var jsonStart = startIdx + PROOF_MARKER.length;
+  var endIdx = findMarkerInBuffer(pdfBuffer, PROOF_END_MARKER, jsonStart);
+  if (endIdx === -1) return null;
+  var jsonBuf = pdfBuffer.subarray(jsonStart, endIdx);
+  try {
+    return JSON.parse(jsonBuf.toString("utf-8"));
+  } catch(e) {
+    return null;
+  }
+}
+
+function getOriginalPdf(pdfBuffer) {
+  var startIdx = findMarkerInBuffer(pdfBuffer, PROOF_MARKER);
+  if (startIdx === -1) return pdfBuffer;
+  // Strip the newline before the marker too
+  var cutAt = startIdx;
+  if (cutAt > 0 && pdfBuffer[cutAt - 1] === 0x0A) cutAt--;
+  return pdfBuffer.subarray(0, cutAt);
+}
+
+module.exports = { embedProofPacket, extractProofPacket, getOriginalPdf };
