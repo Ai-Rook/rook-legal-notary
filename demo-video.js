@@ -1,20 +1,8 @@
-#!/usr/bin/env node
-/**
- * Rook Legal Notary Agent — Video Demo Mode
- * 
- * Runs the full notary flow with 8-9 second pauses between steps
- * for screen recording. Outputs clear section breaks for OBS overlays.
- * 
- * Usage:
- *   Start proxy first: node courtlistener-proxy.js
- *   Then: node demo-video.js
- */
-
 const crypto = require("crypto");
 const http = require("http");
 const { HCSClient } = require("./hcs-client");
 const { buildProofPacket, verifyProofPacket } = require("./proof-packet");
-const { embedProofPacket } = require("./pdf-embed");
+const { embedProofPacket, addProvenanceSeal } = require("./pdf-embed");
 const { buildMerkleTree, verifyMerkleProof } = require("./merkle");
 const fs = require("fs");
 require("dotenv").config();
@@ -92,7 +80,6 @@ async function main() {
   console.log("  -> Server responds with 402 Payment Required...");
   await sleep(SHORT_PAUSE);
 
-  // Show 402 challenge
   var challengeBody = JSON.stringify({ query: "Miranda rights" });
   var challengeRes = await new Promise(function(resolve, reject) {
     var req = http.request({
@@ -100,7 +87,7 @@ async function main() {
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(challengeBody) },
     }, function(res) {
       var body = ""; res.on("data", function(c) { body += c; });
-      res.on("end", function() { resolve({ status: res.statusCode, body: body, header: res.headers["x-payment-required"] }); });
+      res.on("end", function() { resolve({ status: res.statusCode, body: body }); });
     });
     req.on("error", reject);
     req.write(challengeBody);
@@ -133,9 +120,6 @@ async function main() {
     console.log("  x402 payment confirmed on Base");
     if (result.settlement.caseName) {
       console.log("\n  Case: " + result.settlement.caseName);
-    }
-    if (result.settlement.query) {
-      console.log("  Query: " + result.settlement.query);
     }
   }
   console.log("\n  Document retrieved: " + result.data.length + " bytes (PDF)");
@@ -178,49 +162,77 @@ async function main() {
   });
   console.log("  Proof packet assembled:");
   console.log("  Document hash: " + packet.document_hash);
-  console.log("  Retrieved at: " + packet.retrieved_at);
   console.log("  HCS anchor: " + packet.hcs_anchor.tx_id);
-  console.log("  x402 tx: " + (packet.x402_settlement ? packet.x402_settlement.transaction : "none"));
   await sleep(PAUSE);
 
-  // ─── STEP 7: EMBED IN PDF ───
-  banner("STEP 7: EMBED PROOF PACKET IN PDF");
-  console.log("  Attaching proof packet to PDF...");
+  // ─── STEP 7: ADD VISIBLE PROVENANCE SEAL ───
+  banner("STEP 7: ADD VISIBLE PROVENANCE SEAL TO PDF");
+  console.log("  Adding court-facing provenance page to PDF...");
   await sleep(SHORT_PAUSE);
 
-  var embedded = embedProofPacket(result.data, packet);
-  var outPath = "/tmp/legal-doc-notarized.pdf";
-  fs.writeFileSync(outPath, embedded);
-  console.log("\n  Proof packet embedded! " + embedded.length + " bytes");
-  console.log("  Saved: " + outPath);
-  console.log("  The receipt travels with the document.");
+  var sealedPdf = await addProvenanceSeal(result.data, {
+    documentHash: packet.document_hash,
+    hcsTopic: anchor.topic_id,
+    hcsSequence: anchor.sequence_number,
+    consensusTimestamp: anchor.consensus_timestamp,
+    hcsTxId: anchor.tx_id,
+    runningHash: anchor.running_hash,
+    x402Tx: result.settlement ? result.settlement.transaction : null,
+    x402Amount: "0.001",
+    retrievedAt: packet.retrieved_at,
+  });
+
+  console.log("\n  Provenance seal added!");
+  console.log("  PDF now contains visible onchain proof:");
+  console.log("  - Full document hash (SHA-256)");
+  console.log("  - Full HCS consensus timestamp");
+  console.log("  - Full HCS transaction ID");
+  console.log("  - Full running hash");
+  console.log("  - x402 payment reference");
+  console.log("  - Verification URL");
   await sleep(PAUSE);
 
-  // ─── STEP 8: VERIFY ───
-  banner("STEP 8: INDEPENDENT VERIFICATION");
-  console.log("  Re-hashing document and checking against HCS...");
+  // ─── STEP 8: EMBED MACHINE-READABLE PROOF ───
+  banner("STEP 8: EMBED MACHINE-READABLE PROOF PACKET");
+  console.log("  Attaching JSON proof packet after PDF %%EOF marker...");
+  await sleep(SHORT_PAUSE);
+
+  var finalPdf = embedProofPacket(sealedPdf, packet);
+  var outPath = "/tmp/legal-doc-notarized.pdf";
+  fs.writeFileSync(outPath, finalPdf);
+  console.log("\n  Proof packet embedded! " + finalPdf.length + " bytes");
+  console.log("  Saved: " + outPath);
+  console.log("  Human-readable seal: visible on last page");
+  console.log("  Machine-readable proof: embedded after %%EOF");
+  await sleep(PAUSE);
+
+  // ─── STEP 9: VERIFY ───
+  banner("STEP 9: INDEPENDENT VERIFICATION");
+  console.log("  Running zero-dependency verification...");
   await sleep(SHORT_PAUSE);
   var valid = verifyProofPacket(packet, result.data);
   console.log("\n  Document integrity: " + (valid ? "PASS" : "FAIL"));
   console.log("  HCS provenance: PASS");
-  console.log("\n  Run verify.js for zero-dependency third-party verification:");
-  console.log("  node verify.js " + outPath);
+  console.log("\n  Verify independently: node verify.js " + outPath);
   await sleep(PAUSE);
 
   // ─── AUDIT TRAIL ───
   banner("FULL AUDIT TRAIL");
   console.log("  " + "=".repeat(56));
   console.log("  Document: miranda-rights-case-law.pdf (" + result.data.length + " bytes)");
-  console.log("  Hash: sha256:" + hash.substring(0, 32) + "...");
+  console.log("  Hash: " + packet.document_hash);
   console.log("  x402 Payment: " + (result.settlement ? result.settlement.transaction : "confirmed") + " on Base");
   console.log("  HCS Anchor: " + anchor.tx_id);
   console.log("  Consensus: " + anchor.consensus_timestamp);
+  console.log("  Running Hash: " + anchor.running_hash);
   console.log("  Verification: " + (valid ? "PASS" : "FAIL"));
   console.log("  " + "=".repeat(56));
   console.log("");
   console.log("  Onchain provenance for legal research.");
   console.log("  Chain of custody: x402 settlement + HCS consensus timestamp.");
-  console.log("  Anyone can verify at:");
+  console.log("  Visible seal on PDF + machine-readable proof embedded.");
+  console.log("");
+  console.log("  Anyone can independently verify this at:");
   console.log("  https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + anchor.topic_id + "/messages/" + anchor.sequence_number);
   console.log("");
   console.log("  github.com/Ai-Rook/rook-legal-notary");

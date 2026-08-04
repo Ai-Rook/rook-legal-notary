@@ -32,18 +32,26 @@ function fetchJSON(url) {
   });
 }
 
-async function buildCasePdf(caseData) {
+async function buildCasePdf(caseData, provenanceData) {
   var pdfDoc = await PDFDocument.create();
-  var page = pdfDoc.addPage([612, 792]);
   var font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   var boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  var monoFont = await pdfDoc.embedFont(StandardFonts.Courier);
 
-  var y = 750;
   var margin = 50;
   var maxWidth = 85;
 
-  function drawText(text, x, yVal, size, f) {
-    page.drawText(text, { x: x, y: yVal, size: size, font: f || font, color: rgb(0, 0, 0) });
+  function addPage() {
+    var p = pdfDoc.addPage([612, 792]);
+    return p;
+  }
+
+  var page = addPage();
+  var y = 750;
+
+  function drawText(text, x, yVal, size, f, p) {
+    var targetPage = p || page;
+    targetPage.drawText(text, { x: x, y: yVal, size: size, font: f || font, color: rgb(0, 0, 0) });
   }
 
   function wrapText(text, maxChars) {
@@ -65,25 +73,11 @@ async function buildCasePdf(caseData) {
   // Title
   drawText(caseData.caseName || "Unknown Case", margin, y, 14, boldFont);
   y -= 20;
-  
-  if (caseData.citation) {
-    drawText(caseData.citation, margin, y, 11);
-    y -= 16;
-  }
-  if (caseData.court) {
-    drawText(caseData.court, margin, y, 11);
-    y -= 16;
-  }
-  if (caseData.dateFiled) {
-    drawText("Filed: " + caseData.dateFiled, margin, y, 11);
-    y -= 16;
-  }
-  if (caseData.docketNumber) {
-    drawText("Docket: " + caseData.docketNumber, margin, y, 11);
-    y -= 16;
-  }
-  
-  drawText("--------------------------------------------------", margin, y, 8);
+  if (caseData.citation) { drawText(caseData.citation, margin, y, 11); y -= 16; }
+  if (caseData.court) { drawText(caseData.court, margin, y, 11); y -= 16; }
+  if (caseData.dateFiled) { drawText("Filed: " + caseData.dateFiled, margin, y, 11); y -= 16; }
+  if (caseData.docketNumber) { drawText("Docket: " + caseData.docketNumber, margin, y, 11); y -= 16; }
+  drawText("----------------------------------------------------------", margin, y, 8);
   y -= 20;
 
   // Body text
@@ -96,10 +90,7 @@ async function buildCasePdf(caseData) {
   for (var p = 0; p < paragraphs.length; p++) {
     var lines = wrapText(paragraphs[p].trim(), maxWidth);
     for (var li = 0; li < lines.length; li++) {
-      if (y < 50) {
-        page = pdfDoc.addPage([612, 792]);
-        y = 750;
-      }
+      if (y < 50) { page = addPage(); y = 750; }
       drawText(lines[li], margin, y, 10);
       y -= 14;
     }
@@ -107,14 +98,136 @@ async function buildCasePdf(caseData) {
   }
 
   // Footer
-  if (y < 80) {
-    page = pdfDoc.addPage([612, 792]);
-    y = 750;
-  }
+  if (y < 80) { page = addPage(); y = 750; }
   y -= 30;
   drawText("Retrieved via Rook Legal Notary Agent | CourtListener API", margin, y, 8);
   y -= 12;
   drawText("Provenance: x402 payment + HCS notarization", margin, y, 8);
+
+  // ─── VISIBLE PROVENANCE SEAL ───
+  // Add a new page for the provenance seal so it's always on its own page
+  page = addPage();
+  y = 720;
+
+  // Top border
+  drawText("==========================================================", margin, y, 9, monoFont);
+  y -= 20;
+  drawText("  ONCHAIN PROVENANCE SEAL", margin, y, 14, boldFont);
+  y -= 20;
+  drawText("  Rook Legal Notary Agent v1.0", margin, y, 11);
+  y -= 20;
+  drawText("==========================================================", margin, y, 9, monoFont);
+  y -= 25;
+
+  if (provenanceData) {
+    // Document hash — FULL, not truncated
+    drawText("  Document Hash:", margin, y, 11, boldFont);
+    y -= 16;
+    var hashLines = wrapText(provenanceData.documentHash, 70);
+    for (var hl = 0; hl < hashLines.length; hl++) {
+      drawText("  " + hashLines[hl], margin, y, 10, monoFont);
+      y -= 14;
+    }
+    y -= 10;
+
+    // HCS anchor data — FULL
+    if (provenanceData.hcsTopic) {
+      drawText("  HCS Topic ID:", margin, y, 11, boldFont);
+      y -= 16;
+      drawText("  " + provenanceData.hcsTopic, margin, y, 10, monoFont);
+      y -= 20;
+    }
+    if (provenanceData.hcsSequence) {
+      drawText("  HCS Sequence:", margin, y, 11, boldFont);
+      y -= 16;
+      drawText("  " + provenanceData.hcsSequence, margin, y, 10, monoFont);
+      y -= 20;
+    }
+    if (provenanceData.consensusTimestamp) {
+      drawText("  Consensus Timestamp:", margin, y, 11, boldFont);
+      y -= 16;
+      drawText("  " + provenanceData.consensusTimestamp, margin, y, 10, monoFont);
+      y -= 20;
+    }
+    if (provenanceData.hcsTxId) {
+      drawText("  HCS Transaction ID:", margin, y, 11, boldFont);
+      y -= 16;
+      var txLines = wrapText(provenanceData.hcsTxId, 70);
+      for (var tl = 0; tl < txLines.length; tl++) {
+        drawText("  " + txLines[tl], margin, y, 10, monoFont);
+        y -= 14;
+      }
+      y -= 10;
+    }
+    if (provenanceData.runningHash) {
+      drawText("  Running Hash:", margin, y, 11, boldFont);
+      y -= 16;
+      var rhLines = wrapText(provenanceData.runningHash, 70);
+      for (var rh = 0; rh < rhLines.length; rh++) {
+        drawText("  " + rhLines[rh], margin, y, 10, monoFont);
+        y -= 14;
+      }
+      y -= 10;
+    }
+
+    // x402 payment
+    if (provenanceData.x402Tx) {
+      drawText("  x402 Payment:", margin, y, 11, boldFont);
+      y -= 16;
+      drawText("  " + provenanceData.x402Tx, margin, y, 10, monoFont);
+      y -= 16;
+    }
+    if (provenanceData.x402Amount) {
+      drawText("  Amount: $" + provenanceData.x402Amount + " USDC on Base", margin, y, 10, monoFont);
+      y -= 20;
+    }
+
+    // Retrieved at
+    if (provenanceData.retrievedAt) {
+      drawText("  Retrieved At:", margin, y, 11, boldFont);
+      y -= 16;
+      drawText("  " + provenanceData.retrievedAt, margin, y, 10, monoFont);
+      y -= 25;
+    }
+
+    // Verification URL — FULL
+    drawText("  Independent Verification:", margin, y, 11, boldFont);
+    y -= 16;
+    var verifyUrl = "https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + provenanceData.hcsTopic + "/messages/" + provenanceData.hcsSequence;
+    var urlLines = wrapText(verifyUrl, 70);
+    for (var ul = 0; ul < urlLines.length; ul++) {
+      drawText("  " + urlLines[ul], margin, y, 10, monoFont);
+      y -= 14;
+    }
+    y -= 15;
+    drawText("  Run: node verify.js this-file.pdf", margin, y, 10, monoFont);
+    y -= 25;
+
+    // Merkle batch info
+    if (provenanceData.merkleRoot) {
+      drawText("  Merkle Batch Root:", margin, y, 11, boldFont);
+      y -= 16;
+      var mrLines = wrapText(provenanceData.merkleRoot, 70);
+      for (var mr = 0; mr < mrLines.length; mr++) {
+        drawText("  " + mrLines[mr], margin, y, 10, monoFont);
+        y -= 14;
+      }
+      y -= 10;
+      drawText("  (Document is part of a verified batch)", margin, y, 10);
+      y -= 20;
+    }
+  }
+
+  // Bottom border
+  if (y < 60) { page = addPage(); y = 750; }
+  y -= 20;
+  drawText("==========================================================", margin, y, 9, monoFont);
+  y -= 16;
+  drawText("  This document has been cryptographically notarized.", margin, y, 9);
+  y -= 14;
+  drawText("  Any alteration will invalidate the hash on verification.", margin, y, 9);
+  y -= 16;
+  drawText("==========================================================", margin, y, 9, monoFont);
 
   var pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
@@ -153,7 +266,6 @@ var server = http.createServer(async function(req, res) {
     }
 
     try {
-      // Search CourtListener
       var searchUrl = CL_BASE + "/api/rest/v4/search/?q=" + encodeURIComponent(query) + "&order_by=score+desc&limit=1";
       var searchResults = await fetchJSON(searchUrl);
       var results = searchResults.results || [];
@@ -169,7 +281,6 @@ var server = http.createServer(async function(req, res) {
       var opinions = top.opinions || [];
       var opinionText = "";
       
-      // Get full opinion text if available
       if (opinions.length > 0 && opinions[0].id) {
         try {
           var opinionUrl = CL_BASE + "/api/rest/v4/opinions/" + opinions[0].id + "/";
@@ -193,7 +304,8 @@ var server = http.createServer(async function(req, res) {
         text: opinionText,
       };
 
-      var pdfBuffer = await buildCasePdf(caseData);
+      // Build PDF without provenance seal (added later by agent after HCS anchor)
+      var pdfBuffer = await buildCasePdf(caseData, null);
 
       var settlement = {
         transaction: "simulated-x402-payment",
@@ -225,3 +337,6 @@ var server = http.createServer(async function(req, res) {
 server.listen(PORT, function() {
   console.log("x402 Legal Proxy (CourtListener) on port " + PORT);
 });
+
+// Export buildCasePdf for use by the agent
+module.exports = { buildCasePdf };

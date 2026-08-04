@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Independent Verification Script
+ * Independent Verification Script v2
  * 
  * Takes a notarized PDF and verifies it against HCS — no Rook tooling needed.
  * Zero dependencies — just Node.js.
+ * 
+ * Handles v1.1 proof packets (sealed_hash) and v1.0 (document_hash only).
  * 
  * Usage: node verify.js <notarized-pdf-path>
  */
@@ -107,6 +109,9 @@ async function main() {
   }
   console.log("  Found proof packet v" + packet.version);
   console.log("  Document hash: " + packet.document_hash);
+  if (packet.sealed_hash) {
+    console.log("  Sealed hash:   " + packet.sealed_hash);
+  }
   console.log("  Retrieved at: " + packet.retrieved_at);
   if (packet.x402_settlement) {
     console.log("  x402 payment: " + (packet.x402_settlement.transaction || "confirmed"));
@@ -124,15 +129,33 @@ async function main() {
   }
   console.log("");
 
-  // Step 2: Re-hash the original document (strip proof packet bytes)
+  // Step 2: Re-hash the sealed PDF (strip proof packet bytes)
   console.log("[2/4] Re-hashing document...");
-  var originalPdf = getOriginalPdf(fileBuffer);
-  var computedHash = crypto.createHash("sha256").update(originalPdf).digest("hex");
-  var storedHash = packet.document_hash.replace("sha256:", "");
-  var hashMatch = (computedHash === storedHash);
-  console.log("  Computed: sha256:" + computedHash.substring(0, 32) + "...");
-  console.log("  Stored:   sha256:" + storedHash.substring(0, 32) + "...");
-  console.log("  Match: " + (hashMatch ? "PASS" : "FAIL"));
+  var sealedPdf = getOriginalPdf(fileBuffer);
+  
+  var hashMatch;
+  var hashToVerify;
+  
+  if (packet.sealed_hash) {
+    // v1.1: verify sealed hash (includes provenance seal page)
+    var computedSealed = crypto.createHash("sha256").update(sealedPdf).digest("hex");
+    var storedSealed = packet.sealed_hash.replace("sha256:", "");
+    hashMatch = (computedSealed === storedSealed);
+    console.log("  Computed (sealed): sha256:" + computedSealed.substring(0, 32) + "...");
+    console.log("  Stored (sealed):   sha256:" + storedSealed.substring(0, 32) + "...");
+    console.log("  Match: " + (hashMatch ? "PASS" : "FAIL"));
+    // The HCS-anchored hash is the SEALED hash (document + seal page)
+    hashToVerify = packet.sealed_hash.replace("sha256:", "");
+  } else {
+    // v1.0 fallback: verify document hash directly
+    var computed = crypto.createHash("sha256").update(sealedPdf).digest("hex");
+    var stored = packet.document_hash.replace("sha256:", "");
+    hashMatch = (computed === stored);
+    console.log("  Computed: sha256:" + computed.substring(0, 32) + "...");
+    console.log("  Stored:   sha256:" + stored.substring(0, 32) + "...");
+    console.log("  Match: " + (hashMatch ? "PASS" : "FAIL"));
+    hashToVerify = stored;
+  }
   console.log("");
 
   // Step 3: Verify against HCS via public mirror node
@@ -142,7 +165,10 @@ async function main() {
     process.exit(1);
   }
 
-  var hashToVerify = packet.merkle_root || storedHash;
+  if (packet.merkle_root) {
+    hashToVerify = packet.merkle_root;
+  }
+  
   var hcsResult = await queryHCS(packet.hcs_anchor.topic_id, packet.hcs_anchor.sequence_number);
   
   if (hcsResult.found) {
