@@ -123,13 +123,40 @@ async function main() {
   console.log("\n  Document retrieved: " + result.data.length + " bytes (PDF)");
 
   // ─── STEP 4: HASH ───
-  banner("STEP 4: HASH DOCUMENT");
-  var hash = crypto.createHash("sha256").update(result.data).digest("hex");
-  console.log("  SHA-256: " + hash);
+  // ─── STEP 4: ADD VISIBLE PROVENANCE SEAL TO PDF ───
+  banner("STEP 4: ADD VISIBLE PROVENANCE SEAL TO PDF");
+  console.log("  Adding court-facing provenance page to PDF...");
+  await sleep(SHORT_PAUSE);
 
-  // ─── STEP 5: ANCHOR ON HCS ───
-  banner("STEP 5: ANCHOR ON HEDERA CONSENSUS SERVICE");
-  console.log("  Submitting document hash to HCS mainnet...");
+  // Compute original hash first (for display on the seal page)
+  var originalHash = crypto.createHash("sha256").update(result.data).digest("hex");
+  console.log("  Original document hash: sha256:" + originalHash);
+
+  var sealedPdf = await addProvenanceSeal(result.data, {
+    documentHash: "sha256:" + originalHash,
+    hcsTopic: process.env.HCS_TOPIC_ID,
+    hcsSequence: "(pending)",
+    consensusTimestamp: "(pending)",
+    hcsTxId: "(pending)",
+    runningHash: "(pending)",
+    x402Tx: result.settlement ? result.settlement.transaction : null,
+    x402Amount: "0.001",
+    retrievedAt: new Date().toISOString(),
+  });
+
+  console.log("\n  Provenance seal page added!");
+  console.log("  PDF now contains visible onchain proof page.");
+
+  // ─── STEP 5: HASH THE SEALED PDF ───
+  banner("STEP 5: HASH THE SEALED PDF");
+  var sealedHash = crypto.createHash("sha256").update(sealedPdf).digest("hex");
+  console.log("  Sealed PDF SHA-256: " + sealedHash);
+  console.log("  (includes provenance seal page)");
+  await sleep(SHORT_PAUSE);
+
+  // ─── STEP 6: ANCHOR ON HCS ───
+  banner("STEP 6: ANCHOR ON HEDERA CONSENSUS SERVICE");
+  console.log("  Submitting sealed hash to HCS mainnet...");
   await sleep(SHORT_PAUSE);
 
   var hcs = new HCSClient({
@@ -138,7 +165,7 @@ async function main() {
     topicId: process.env.HCS_TOPIC_ID,
     network: "mainnet",
   });
-  var anchor = await hcs.anchorHash(hash);
+  var anchor = await hcs.anchorHash(sealedHash);
   hcs.close();
 
   console.log("\n  HCS anchor confirmed!");
@@ -147,37 +174,21 @@ async function main() {
   console.log("  Consensus: " + anchor.consensus_timestamp);
   console.log("  Tx: " + anchor.tx_id);
 
-  // ─── STEP 6: BUILD PROOF PACKET ───
-  banner("STEP 6: BUILD PROOF PACKET");
+  // ─── STEP 7: BUILD PROOF PACKET ───
+  banner("STEP 7: BUILD PROOF PACKET");
   var packet = buildProofPacket({
     documentBuffer: result.data,
+    sealedBuffer: sealedPdf,
     filename: "miranda-rights-case-law.pdf",
     x402Settlement: result.settlement,
     hcsAnchor: anchor,
   });
   console.log("  Proof packet assembled:");
   console.log("  Document hash: " + packet.document_hash);
+  console.log("  Sealed hash:   " + packet.sealed_hash);
   console.log("  HCS anchor: " + packet.hcs_anchor.tx_id);
 
-  // ─── STEP 7: ADD VISIBLE PROVENANCE SEAL ───
-  banner("STEP 7: ADD VISIBLE PROVENANCE SEAL TO PDF");
-  console.log("  Adding court-facing provenance page to PDF...");
-  await sleep(SHORT_PAUSE);
-
-  var sealedPdf = await addProvenanceSeal(result.data, {
-    documentHash: packet.document_hash,
-    hcsTopic: anchor.topic_id,
-    hcsSequence: anchor.sequence_number,
-    consensusTimestamp: anchor.consensus_timestamp,
-    hcsTxId: anchor.tx_id,
-    runningHash: anchor.running_hash,
-    x402Tx: result.settlement ? result.settlement.transaction : null,
-    x402Amount: "0.001",
-    retrievedAt: packet.retrieved_at,
-  });
-
-  console.log("\n  Provenance seal added!");
-  console.log("  PDF now contains visible onchain proof:");
+  console.log("\n  PDF now contains visible onchain proof:");
   console.log("  - Full document hash (SHA-256)");
   console.log("  - Full HCS consensus timestamp");
   console.log("  - Full HCS transaction ID");
