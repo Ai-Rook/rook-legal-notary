@@ -104,13 +104,6 @@ async function buildCasePdf(caseData, provenanceData) {
   y -= 12;
   drawText("Provenance: x402 payment + HCS notarization", margin, y, 8);
 
-  // ─── VISIBLE PROVENANCE SEAL ───
-  // Add a new page for the provenance seal so it's always on its own page
-  page = addPage();
-  y = 720;
-
-  // Top border
-  drawText("==========================================================", margin, y, 9, monoFont);
   y -= 20;
   drawText("  ONCHAIN PROVENANCE SEAL", margin, y, 14, boldFont);
   y -= 20;
