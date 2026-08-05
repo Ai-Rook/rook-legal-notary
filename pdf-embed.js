@@ -82,7 +82,7 @@ async function addProvenanceSeal(pdfBuffer, sealData) {
   // Verification instructions — no CLI, no GitHub, just URLs
   drawText("  Verify This Document:", 11, boldFont); y -= 16;
   drawText("  Upload this PDF at:", 10); y -= 14;
-  drawText("  https://ai-rook.com/verify", 10, monoFont); y -= 20;
+  drawText("  https://agents.ai-rook.com/verify", 10, monoFont); y -= 20;
   drawText("  Or check directly on Hedera:", 10); y -= 14;
   var mirrorUrl = "https://mainnet-public.mirrornode.hedera.com/api/v1/topics/" + sealData.hcsTopic;
   var urlLines = wrapText(mirrorUrl, 70);
