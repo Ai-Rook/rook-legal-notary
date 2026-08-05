@@ -78,6 +78,19 @@ We spent time thinking about how to frame this for a legal tech audience. The te
 
 The README keeps it to four sentences and lets the verify.js script do the talking. Judges will trust a working script over legal argumentation from a non-lawyer team.
 
+## The Identity Layer: Why Provenance Needs Identity
+
+During the build, we came across work from **Daniel Norkin** (@DanielNorkin on X), who is building x402 + Hedera identity attestation — a complementary approach to ours. Daniel's work focuses on the *who*: attesting that a specific agent or entity is who they claim to be, using x402 payments and Hedera anchoring for identity verification.
+
+Our legal notary agent focuses on the *what* and *when*: proving that a specific document existed in a specific state at a specific time, with a consensus timestamp from HCS. But without identity attestation, our proof only establishes document integrity — it doesn't establish who retrieved the document or who authorized the notarization.
+
+Together, these two approaches form a complete chain of custody:
+
+- **Identity attestation** (Daniel's work) — *who* requested and paid for the document
+- **Document provenance** (our work) — *what* was retrieved and *when* it was anchored onchain
+
+This is the kind of cross-pollination that makes the x402 + Hedera ecosystem exciting. Different teams attacking different pieces of the same problem — agent identity on one side, document integrity on the other — and the stack composes naturally because both use the same payment rail (x402) and the same anchoring layer (Hedera). We see this convergence as an early signal of where agent commerce is heading: autonomous agents that can prove who they are, what they did, and when they did it — all on public infrastructure.
+
 ## Chainlink CRE Integration
 
 We also wrapped the flow as a Chainlink Runtime Environment (CRE) workflow for the Chainlink CRE bounty ($1K x2). The CRE version uses the trigger-and-callback model: an HTTP trigger receives a research query, the callback orchestrates document retrieval across a Decentralized Oracle Network (DON), and each node independently retrieves, hashes, and verifies through BFT consensus. The workflow compiles to WebAssembly and can be simulated locally or deployed to a DON.
@@ -102,6 +115,7 @@ This is the same flow, just orchestrated differently. The core innovation — x4
 - **Self-funded agent loop** — agent earns USDC from onchain actions and uses it to pay for its own API calls
 - **Court submission format** — package the proof packet as a court-compliant exhibit cover sheet
 - **Multi-jurisdiction support** — different HCS topics for different legal jurisdictions
+- **Identity integration** — combine document provenance with agent identity attestation for full chain of custody — different HCS topics for different legal jurisdictions
 
 ## Built For
 
