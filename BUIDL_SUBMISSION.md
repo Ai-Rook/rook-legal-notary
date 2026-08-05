@@ -37,11 +37,11 @@ Every notarized document is anchored on Hedera Consensus Service mainnet. The la
 
 Anyone can verify a notarized PDF without installing anything:
 
-🔍 **[ai-rook.com/verify](https://ai-rook.com/verify)** — Upload the PDF, get a pass/fail verdict in seconds. The web verifier extracts the embedded proof packet, re-hashes the document, and queries the public Hedera mirror node API.
+🔍 **[agents.ai-rook.com/verify](https://agents.ai-rook.com/verify)** — Upload the PDF, get a pass/fail verdict in seconds. The web verifier extracts the embedded proof packet, re-hashes the document, and queries the public Hedera mirror node API.
 
 ### Sample Notarized PDF
 
-📄 [Download the sample PDF](https://github.com/Ai-Rook/rook-legal-notary/blob/main/sample/legal-doc-notarized.pdf) and verify it yourself at [ai-rook.com/verify](https://ai-rook.com/verify).
+📄 [Download the sample PDF](https://github.com/Ai-Rook/rook-legal-notary/blob/main/sample/legal-doc-notarized.pdf) and verify it yourself at [agents.ai-rook.com/verify](https://agents.ai-rook.com/verify).
 
 ### What's Inside the PDF
 
@@ -49,7 +49,7 @@ Every notarized PDF contains:
 
 **Page 1 — Case Law Document**
 - Real case law retrieved from CourtListener (9M+ court opinions)
-- Footer with provenance stamp: `HCS Anchored | sha256:... | Verify: ai-rook.com/verify`
+- Footer with provenance stamp: `HCS Anchored | sha256:... | Verify: agents.ai-rook.com/verify`
 
 **Page 2 — Visible Provenance Seal**
 - Full document hash (SHA-256) — nothing truncated
@@ -93,7 +93,7 @@ A JSON artifact embedded after the PDF's %%EOF marker (byte-safe — doesn't cor
 Zero-dependency verification — just Node.js. The `verify.js` script extracts the proof packet, re-hashes the sealed PDF, queries the public Hedera mirror node, and prints PASS/FAIL. No Rook tooling required.
 
 ### Web Verifier
-[ai-rook.com/verify](https://ai-rook.com/verify) — a browser-based verifier. Upload the PDF, get a green checkmark or red X. No CLI, no GitHub, no installation. Built for paralegals, not developers.
+[agents.ai-rook.com/verify](https://agents.ai-rook.com/verify) — a browser-based verifier. Upload the PDF, get a green checkmark or red X. No CLI, no GitHub, no installation. Built for paralegals, not developers.
 
 ### Merkle Batch Mode
 For research sessions pulling multiple documents, the agent Merkle-trees all document hashes and anchors a single root to HCS. Each document's inclusion is independently verifiable. One transaction for the whole batch.
@@ -141,7 +141,7 @@ This is an **authentication aid that supports admissibility**, not a claim of au
      ▼                      ▼
 ┌──────────────────────────────────────┐
 │  Final PDF (case law + seal + proof) │
-│  Verify: ai-rook.com/verify          │
+│  Verify: agents.ai-rook.com/verify          │
 │  Verify: node verify.js <pdf>        │
 └──────────────────────────────────────┘
 ```
@@ -150,7 +150,7 @@ This is an **authentication aid that supports admissibility**, not a claim of au
 
 - 🎬 Demo Video: https://youtu.be/SU_zUwT5rug
 - 📦 GitHub: https://github.com/Ai-Rook/rook-legal-notary
-- 🔍 Web Verifier: https://ai-rook.com/verify
+- 🔍 Web Verifier: https://agents.ai-rook.com/verify
 - 📄 Sample PDF: https://github.com/Ai-Rook/rook-legal-notary/blob/main/sample/legal-doc-notarized.pdf
 - ⛓️ HCS Topic (live): https://mainnet-public.mirrornode.hedera.com/api/v1/topics/0.0.10791674
 - ✍️ Blog Post: https://github.com/Ai-Rook/rook-legal-notary/blob/main/BLOG_POST.md

@@ -39,6 +39,8 @@ Zero dependencies — just Node.js:
 
 ```bash
 node verify.js notarized-document.pdf
+
+Or verify in your browser at **agents.ai-rook.com/verify** — upload the PDF, get a green checkmark. Zero installation.
 ```
 
 Output:
