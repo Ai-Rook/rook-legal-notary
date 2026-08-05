@@ -72,6 +72,8 @@ We built `verify.js` — a zero-dependency Node.js script that takes a notarized
 
 Anyone can run it. No Rook tooling. No dependencies. Just `node verify.js document.pdf`.
 
+We also built a web-based verifier at **agents.ai-rook.com/verify** — upload the PDF and get a green checkmark in seconds. Zero installation, zero CLI. Built for paralegals, not developers.
+
 ## The Legal Framing
 
 We spent time thinking about how to frame this for a legal tech audience. The temptation is to claim "admissible evidence" — a strong claim that invites scrutiny. We chose the safer framing: "authentication aid that supports admissibility." Under US Federal Rules of Evidence 902(13) and 902(14), self-authenticating electronic records with hash verification are already recognized as an authentication pathway. We're implementing an existing evidentiary pathway, not inventing a new legal theory.
@@ -103,7 +105,7 @@ This is the same flow, just orchestrated differently. The core innovation — x4
 
 2. **The simplest protocol wins.** PDF metadata attachments via pdf-lib didn't work for reading back. A trailing append after %%EOF works perfectly and is simpler. Don't over-engineer the storage layer.
 
-3. **Independent verification is the whole product.** If someone can't verify your notarization without your tooling, it's not notarization — it's a claim. The zero-dependency verify.js was the most important file we wrote.
+3. **Independent verification is the whole product.** If someone can't verify your notarization without your tooling, it's not notarization — it's a claim. The zero-dependency verify.js and the web verifier at agents.ai-rook.com/verify were the most important files we built.
 
 4. **Config drift is real.** Duplicate keys in environment files caused our first HCS failure. Clean configs and fresh resources beat debugging someone else's permissions.
 
